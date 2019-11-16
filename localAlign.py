@@ -92,8 +92,12 @@ def dynprog(alphabet, scoringMatrix, seqA, seqB):
         return -1
     lenA = len(seqA)
     lenB = len(seqB)
+    if(lenA == 0 or lenB == 0):
+        print("Error: Cannot align empty string")
+        return 0,[],[]
     matrices = initializeMatrices(lenA, lenB)
     bestScore = [0, (0,0)] #stores best local score and the endpoint symbols
+    
     for i in range(2, lenA+2):
         for j in range(2, lenB+2):
             #diagonal, up, left and fresh start respectively
@@ -111,15 +115,15 @@ def dynprog(alphabet, scoringMatrix, seqA, seqB):
                     break
                 n += 1
             
-            score = max(matchScore + matrices[0][i-1][j-1], matrices[0][i-1][j] + scoringMatrix[m][len(scoringMatrix[m])-1], matrices[0][i][j-1] + scoringMatrix[len(scoringMatrix[n])-1][n], 0)
+            score = max(matchScore + matrices[0][i-1][j-1], matrices[0][i-1][j] + scoringMatrix[m][len(scoringMatrix[m])-1], matrices[0][i][j-1] + scoringMatrix[n][len(scoringMatrix[n])-1], 0)
 
             if(score == 0):
                 matrices[1][i][j] = "S"
             elif(score == matchScore + matrices[0][i-1][j-1]):
                 matrices[1][i][j] = "D"
-            elif(score == matrices[0][i-1][j] + scoringMatrix[0][len(scoringMatrix[0])-1]):
+            elif(score == matrices[0][i-1][j] + scoringMatrix[m][len(scoringMatrix[m])-1]):
                 matrices[1][i][j] = "U"
-            elif(score == matrices[0][i][j-1] + scoringMatrix[len(scoringMatrix[0])-1][0]):
+            elif(score == matrices[0][i][j-1] + scoringMatrix[n][len(scoringMatrix[n])-1]):
                 matrices[1][i][j] = "L"
             
             matrices[0][i][j] = score
@@ -128,217 +132,301 @@ def dynprog(alphabet, scoringMatrix, seqA, seqB):
                 bestScore[1] = (i-2,j-2)
     
     indices = findIndices(matrices[1], lenA, lenB, bestScore[1][0], bestScore[1][1])
-    print(np.matrix(matrices[0]))
-    #print(np.matrix(matrices[1]))
-    print("Best Local Score is:  ", bestScore[0])
-    print("Resulting indices:  ", indices[0],indices[1])
+    print(bestScore[0],indices[0],indices[1])
     return bestScore[0],indices[0],indices[1]
 
-dynprog("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "AAAC", "AGC")
-dynprog("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "TAATA", "TACTAA")
-dynprog("ABC", [[1,-1,-2,-1],[-1,2,-4,-1],[-2,-4,3,-2],[-1,-1,-2,0]], "AABBAACA", "CBACCCBA")
+#dynprog("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "AAAC", "AGC")
+#dynprog("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "TAATA", "TACTAA")
+#dynprog("ACTG", [[2,-1,-1,-1,-2],[-1,2,-1,-2],[-1,-1,2,-1,-2],[-1,-1,-1,2,-2],[-2,-2,-2,-2,0]], "AGTACGCA", "TATGC")
+#dynprog("ABC", [[1,-1,-2,-1],[-1,2,-4,-1],[-2,-4,3,-2],[-1,-1,-2,0]], "AABBAACA", "CBACCCBA")     
+#dynprog("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"AAAAACCDDCCDDAAAAACC","CCAAADDAAAACCAAADDCCAAAA")
+#dynprog("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"AACAAADAAAACAADAADAAA","CDCDDD")
+#dynprog("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"DDCDDCCCDCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACCCCDDDCDADCDCDCDCD","DDCDDCCCDCBCCCCDDDCDBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBDCDCDCDCD")
 
-
-def initializeMatricesLin(lenA, lenB):
-    if(lenA <= lenB):
-        matrix = [[None for i in range(2)] for j in range(lenA+1)]
-        backtr = [[None for i in range(2)] for j in range(lenA+1)]
-    else:
-        matrix = [[None for i in range(lenB+1)] for j in range(2)]
-        backtr = [[None for i in range(lenB+1)] for j in range(2)]
-        
-    for i in range(0, len(matrix[0])): #initialise indices of seqA
-        matrix[0][i] = 0
-        backtr[0][i] = "S"
-    for j in range(0, len(matrix)): #initialise indices of seqB
-        matrix[j][0] = 0
-        backtr[j][0] = "S"
-        
-    matrix[0][0] = 0
-    backtr[0][0] = "FN"
-        
-    #print(np.matrix(matrix))
+def findIndicesGlobal(backtr, lenA, lenB):
+    m = len(backtr) - 1
+    n = len(backtr[0]) - 1
+    matchIndexA = []
+    matchIndexB = []
     #print(np.matrix(backtr))
+    while(backtr[m][n] != "FN"):
+        if(backtr[m][n] == "L"):
+            n -= 1
+        elif(backtr[m][n] == "U"):
+            m -= 1
+        elif(backtr[m][n] == "D"):
+            matchIndexA.insert(0,m-2)
+            matchIndexB.insert(0,n-2)
+            m -= 1
+            n -= 1
+        elif(backtr[m][n] == "FN"): #end of alignment
+            break
+        
+    return matchIndexA, matchIndexB
+
+def initializeMatricesGlobal(alphabet, scoringMatrix, seqA, seqB):
+    lenA = len(seqA)
+    lenB = len(seqB)
+    
+    matrix = [[None for i in range(lenB+2)] for j in range(lenA+2)]
+    backtr = [[None for i in range(lenB+2)] for j in range(lenA+2)]
+    
+    #initialise empty unused cells
+    matrix[0][0] = " "
+    matrix[0][1] = " "
+    matrix[1][0] = " "
+    matrix[1][1] = 0
+    backtr[0][0]= ""
+    backtr[0][1]= "  "
+    backtr[1][0]= ""
+    
+    for i in range(2, lenA+2): #initialise indices of seqA
+        matrix[i][0] = i-2
+        
+        m = 0
+        for symbol in alphabet:
+            if(seqA[i-2] == symbol):
+                break
+            m += 1
+        matrix[i][1] = matrix[i-1][1] + scoringMatrix[m][len(scoringMatrix[m])-1]
+        
+        backtr[i][0] = i-2
+        backtr[i][1] = "U"
+    for j in range(2, lenB+2): #initialise indices of seqB
+        matrix[0][j] = j-2
+        
+        n = 0
+        for symbol in alphabet:
+            if(seqB[j-2] == symbol):
+                break
+            n += 1
+        matrix[1][j] = matrix[1][j-1] + scoringMatrix[n][len(scoringMatrix[n])-1]
+        
+        backtr[0][j] = j-2
+        backtr[1][j] = "L"
+    
+    backtr[1][1] = "FN"
+        
     return [matrix, backtr]
 
-def align(alphabet, scoringMatrix, seqA, seqB):
+def dynprogGlobal(alphabet, scoringMatrix, seqA, seqB):
+    if(checkInput(alphabet, scoringMatrix, seqA, seqB) == -1):
+        return -1
+    
     lenA = len(seqA)
     lenB = len(seqB)
+    if(lenA == 0 or lenB == 0):
+        print("Error: Cannot align empty string")
+        return 0,[],[]
+    matrices = initializeMatricesGlobal(alphabet, scoringMatrix, seqA, seqB)
     
-    matrices = initializeMatricesLin(lenA, lenB)
-    bestScore = [0, (0,0)] #stores best local score and the endpoint symbols
-    if(lenA <= lenB):
-        Ashort = True
-    else:
-        Ashort = False
-    
-    short = min(lenA, lenB)
-    count = 0
-    while(count < short):
-        for i in range(1, len(matrices[0])):
-            for j in range(1, len(matrices[0][0])):
-                #diagonal, up, left and fresh start respectively
-                #print(seqA[i-1], seqB[j-1+count])
-                if(Ashort):
-                    matchScore = getMatch(alphabet, scoringMatrix, seqA, seqB, i-1, j-1+count)
-                else:
-                    matchScore = getMatch(alphabet, scoringMatrix, seqA, seqB, i-1+count, j-1)
-                    
-                score = max(matchScore + matrices[0][i-1][j-1], matrices[0][i-1][j] + scoringMatrix[0][len(scoringMatrix[0])-1], matrices[0][i][j-1] + scoringMatrix[len(scoringMatrix[0])-1][0], 0)
-    
-                if(score == 0):
-                    matrices[1][i][j] = "S"
-                elif(score == matchScore + matrices[0][i-1][j-1]):
-                    matrices[1][i][j] = "D"
-                elif(score == matrices[0][i-1][j] + scoringMatrix[0][len(scoringMatrix[0])-1]):
-                    matrices[1][i][j] = "U"
-                elif(score == matrices[0][i][j-1] + scoringMatrix[len(scoringMatrix[0])-1][0]):
-                    matrices[1][i][j] = "L"
+    for i in range(2, lenA+2):
+        for j in range(2, lenB+2):
+            #diagonal, up, left and fresh start respectively
+            matchScore = getMatch(alphabet, scoringMatrix, seqA, seqB, i-2, j-2)
+            
+            m = 0
+            for symbol in alphabet:
+                if(seqA[i-2] == symbol):
+                    break
+                m += 1
+            
+            n = 0
+            for symbol in alphabet:
+                if(seqB[j-2] == symbol):
+                    break
+                n += 1
+            
+            score = max(matchScore + matrices[0][i-1][j-1], matrices[0][i-1][j] + scoringMatrix[m][len(scoringMatrix[m])-1], matrices[0][i][j-1] + scoringMatrix[n][len(scoringMatrix[n])-1])
                 
-                matrices[0][i][j] = score
-                
-                if(score > bestScore[0]):
-                    bestScore[0] = score
-                    if(Ashort): 
-                        bestScore[1] = (i-1,j-1+count)
-                    else:
-                        bestScore[1] = (i-1+count,j-1)
-                    
-                if(Ashort):                                 #"forget" the previous column
-                    matrices[0][i-1][j-1] = matrices[0][i-1][j] 
-                    matrices[1][i-1][j-1] = matrices[1][i-1][j] 
-                else:                                       #"forget" the previous row
-                    matrices[0][i-1][j-1] = matrices[0][i][j-1] 
-                    matrices[1][i-1][j-1] = matrices[1][i][j-1]
-        if(Ashort):                                 #"forget" the last remaining colunm cell
-            matrices[0][len(matrices[0])-1][len(matrices[0][0])-2] = matrices[0][len(matrices[0])-1][len(matrices[0][0])-1] 
-            matrices[1][len(matrices[0])-1][len(matrices[0][0])-2] = matrices[1][len(matrices[0])-1][len(matrices[0][0])-1]
-        else:                                       #"forget" the last remaining row cell 
-            matrices[0][len(matrices[0])-2][len(matrices[0][0])-1] = matrices[0][len(matrices[0])-1][len(matrices[0][0])-1] 
-            matrices[1][len(matrices[0])-2][len(matrices[0][0])-1] = matrices[1][len(matrices[0])-1][len(matrices[0][0])-1]
-        #print(np.matrix(matrices[1]))
-        count += 1
-    #print(np.matrix(matrices[0]))
-    return bestScore, matrices
-        
-def findIndicesLin(alphabet, scoringMatrix, seqA, seqB):
-    lenA = len(seqA)
-    lenB = len(seqB)
+            if(score == matchScore + matrices[0][i-1][j-1]):
+                matrices[1][i][j] = "D"
+            elif(score == matrices[0][i-1][j] + scoringMatrix[m][len(scoringMatrix[m])-1]):
+                matrices[1][i][j] = "U"
+            elif(score == matrices[0][i][j-1] + scoringMatrix[n][len(scoringMatrix[n])-1]):
+                matrices[1][i][j] = "L"
+            
+            matrices[0][i][j] = score
     
-    global matchIndexA
-    matchIndexA = []
-    global matchIndexB
-    matchIndexB = []
+    indices = findIndicesGlobal(matrices[1], lenA, lenB)
+    return matrices[0][len(matrices[0]) - 1][len(matrices[0][0]) - 1],indices[0],indices[1]
+
+def getScoreLocal(alphabet, scoringMatrix, seqA, seqB):
+    #initialise matrix
+    matrix = [[None for i in range(len(seqB)+1)] for j in range(2)]
+    matrix[0][0] = 0
     
-    #print("lenA ", lenA)
-    #print("lenB ", lenB)
-    if(lenA == 1 or lenB == 1):
-        alignment = align(alphabet, scoringMatrix, seqA, seqB)
-        backtr = alignment[1][1]
-        start = alignment[0]
-        
-        m = start[1][0] + 1
-        n = start[1][1] + 1
-        #print(np.matrix(backtr))
-        while(backtr[m][n] != "FN"):
-            if backtr[m][n] == "L":
-                n -= 1
-            elif backtr[m][n] == "U":
-                m -= 1
-            elif backtr[m][n] == "D":
-                matchIndexA.insert(0,m-1)
-                matchIndexB.insert(0,n-1)
-                print(matchIndexA, matchIndexB)
-                m -= 1
-                n -= 1
-            elif(backtr[m][n] == "S"): #end of local alignment
+    for i in range(1, len(seqB)+1): 
+        n = 0
+        for symbol in alphabet:
+            if(seqB[i-1] == symbol):
                 break
-    else:
-        findIndicesLin(alphabet, scoringMatrix, seqA[0:lenA//2], seqB[0:lenB//2])
-        findIndicesLin(alphabet, scoringMatrix, seqA[lenA//2:lenA], seqB[lenB//2:lenB])
-    print(matchIndexA, matchIndexB)
+            n += 1
+            
+        matrix[0][i] = matrix[0][i-1] + scoringMatrix[n][len(scoringMatrix[n])-1]
+    
+    highestScore = [0, (0,0)]
+    
+    for i in range(0, len(seqA)):
+        
+        for j in range(0, len(seqB)+1):
+            n = 0
+            if(j != 0):
+                matchScore = getMatch(alphabet, scoringMatrix, seqA, seqB, i, j-1)
+                for symbol in alphabet:
+                    if(seqB[j-1] == symbol):
+                        break
+                    n += 1
+            m = 0
+            for symbol in alphabet:
+                if(seqA[i] == symbol):
+                    break
+                m += 1
+            
+
+            #print(np.matrix(matrix))
+            #diagonal, up, left 
+            if(j == 0):
+                matrix[1][j] = 0
+            else:
+                matrix[1][j] = max(matchScore + matrix[0][j-1], matrix[0][j] + scoringMatrix[m][len(scoringMatrix[m])-1], matrix[1][j-1] + scoringMatrix[n][len(scoringMatrix[n])-1], 0)
+            
+            #print(np.matrix(matrix))
+            if(matrix[1][j] >= highestScore[0]):
+                highestScore[0] = matrix[1][j]
+                highestScore[1] = (i+1,j)
+        #print(np.matrix(matrix))
+        
+        #print(matrix[1])
+        matrix[0][:] = matrix[1][:]
+    #print(highestScore)
+    return matrix[1], highestScore
+
+def getLineGlobal(alphabet, scoringMatrix, seqA, seqB):
+    #initialise matrix
+    matrix = [[None for i in range(len(seqB)+1)] for j in range(2)]
+    matrix[0][0] = 0
+    
+    for i in range(1, len(seqB)+1): 
+        n = 0
+        for symbol in alphabet:
+            if(seqB[i-1] == symbol):
+                break
+            n += 1
+            
+        matrix[0][i] = matrix[0][i-1] + scoringMatrix[n][len(scoringMatrix[n])-1]
+    
+    highestScore = [0, (0,0)]
+    
+    for i in range(0, len(seqA)):
+        
+        for j in range(0, len(seqB)+1):
+            n = 0
+            if(j != 0):
+                matchScore = getMatch(alphabet, scoringMatrix, seqA, seqB, i, j-1)
+                for symbol in alphabet:
+                    if(seqB[j-1] == symbol):
+                        break
+                    n += 1
+            m = 0
+            for symbol in alphabet:
+                if(seqA[i] == symbol):
+                    break
+                m += 1
+            
+
+            #print(np.matrix(matrix))
+            #diagonal, up, left 
+            if(j == 0):
+                matrix[1][j] = matrix[0][j] + scoringMatrix[m][len(scoringMatrix[m])-1]
+            else:
+                matrix[1][j] = max(matchScore + matrix[0][j-1], matrix[0][j] + scoringMatrix[m][len(scoringMatrix[m])-1], matrix[1][j-1] + scoringMatrix[n][len(scoringMatrix[n])-1])
+            
+            #print(np.matrix(matrix))
+            if(matrix[1][j] >= highestScore[0]):
+                highestScore[0] = matrix[1][j]
+                #print(matrix,(i,j))
+                highestScore[1] = (i,j-1)
+        #print(np.matrix(matrix))
+        
+        #print(matrix[1])
+        matrix[0][:] = matrix[1][:]
+    #print(highestScore)
+    return matrix[1], highestScore
 
 def dynproglin(alphabet, scoringMatrix, seqA, seqB):
     if(checkInput(alphabet, scoringMatrix, seqA, seqB) == -1):
         return -1
     
-    bestScore = align(alphabet, scoringMatrix, seqA, seqB)[0]
+    localEnd = getLineGlobal(alphabet, scoringMatrix, seqA, seqB)
+    seqA = seqA[0:localEnd[1][1][0]+1]
+    seqB = seqB[0:localEnd[1][1][1]+1]
     
-    seqA = seqA[0:bestScore[1][0]]
-    seqB = seqB[0:bestScore[1][1]]
-    indices = findIndicesLin(alphabet, scoringMatrix, seqA, seqB)
+    topScore = getScoreLocal(alphabet, scoringMatrix, seqA, seqB)[1][0]#localEnd[1][0]
     
-    #print(np.matrix(matrices[0]))
-    #print(np.matrix(matrices[1]))
-    print("Best Local Score is:  ", bestScore[0])
-    #print("Resulting indices:  ", indices[0],indices[1])
+    seqA = seqA[::-1]
+    seqB = seqB[::-1]
+    
+    lenA = len(seqA)
+    lenB = len(seqB)
+    
+    localStart = getLineGlobal(alphabet, scoringMatrix, seqA, seqB)
+    seqA = seqA[0:localStart[1][1][0]+1]
+    seqB = seqB[0:localStart[1][1][1]+1]
+    
+    startIndex = localStart[1][1]
+    
+    seqA = seqA[::-1]
+    seqB = seqB[::-1]
+    
+    offsetA = lenA - startIndex[0] - 1
+    offsetB = lenB - startIndex[1] - 1
+    
+    def dynproglin(alphabet, scoringMatrix, seqA, seqB, offsetA, offsetB):
+        
+        if(len(seqA) == 0 or len(seqB) == 0):
+            return [[], []]
+        elif(len(seqA) == 1 or len(seqB) == 1):
+            bestScore = dynprogGlobal(alphabet, scoringMatrix, seqA, seqB)
+            indices = [[x + offsetA for x in bestScore[1]],[y + offsetB for y in bestScore[2]]]
+            
+            return indices
+        else:
+            lenA = len(seqA)
+            lenB = len(seqB)
+        
+            Amid = lenA // 2
+            
+            L = getLineGlobal(alphabet, scoringMatrix, seqA[0:Amid], seqB)
+            ScoreL = L[0]
+            partA = seqA[Amid:lenA]
+            R = getLineGlobal(alphabet, scoringMatrix, partA[::-1], seqB[::-1])
+            ScoreR = R[0]
+            
+            argMax = [sum(x) for x in zip(ScoreL, ScoreR[::-1])]
+            Bmid = argMax.index(max(argMax))
+            
+            bestScoreL = dynproglin(alphabet, scoringMatrix, seqA[0:Amid], seqB[0:Bmid], offsetA, offsetB)
+            bestScoreR = dynproglin(alphabet, scoringMatrix, seqA[Amid:lenA], seqB[Bmid:lenB], offsetA+Amid, offsetB+Bmid)
+            
+            indices = [[], []]
+            
+            indices[0] = bestScoreL[0] + bestScoreR[0]
+            indices[1] = bestScoreL[1] + bestScoreR[1]
+            
+            return indices
+        
+    indices = dynproglin(alphabet, scoringMatrix, seqA, seqB, offsetA, offsetB)
+    print(topScore, indices[0], indices[1])
+    return topScore, indices[0], indices[1]
 
 #dynproglin("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "AAAC", "AGC")
 #dynproglin("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "TAATA", "TACTAA")
-#dynproglin("ABC", [[1,-1,-2,-1],[-1,2,-4,-1],[-2,-4,3,-2],[-1,-1,-2,0]], "AABBAACA", "CBACCCBA")
-         
-"""
-lenA = len(seqA)
-lenB = len(seqB)
-
-matrices = initializeMatricesLin(lenA, lenB)
-bestScore = [0, (0,0)] #stores best local score and the endpoint symbols
-if(lenA <= lenB):
-    Ashort = True
-else:
-    Ashort = False
-
-short = min(lenA, lenB)
-count = 0
-while(count < short):
-    for i in range(1, len(matrices[0])):
-        for j in range(1, len(matrices[0][0])):
-            #diagonal, up, left and fresh start respectively
-            print(seqA[i-1], seqB[j-1+count])
-            if(Ashort):
-                matchScore = getMatch(alphabet, scoringMatrix, seqA, seqB, i-1, j-1+count)
-            else:
-                matchScore = getMatch(alphabet, scoringMatrix, seqA, seqB, i-1+count, j-1)
-                
-            score = max(matchScore + matrices[0][i-1][j-1], matrices[0][i-1][j] + scoringMatrix[0][len(scoringMatrix[0])-1], matrices[0][i][j-1] + scoringMatrix[len(scoringMatrix[0])-1][0], 0)
-
-            if(score == 0):
-                matrices[1][i][j] = "S"
-            elif(score == matchScore + matrices[0][i-1][j-1]):
-                matrices[1][i][j] = "D"
-            elif(score == matrices[0][i-1][j] + scoringMatrix[0][len(scoringMatrix[0])-1]):
-                matrices[1][i][j] = "U"
-            elif(score == matrices[0][i][j-1] + scoringMatrix[len(scoringMatrix[0])-1][0]):
-                matrices[1][i][j] = "L"
-            
-            matrices[0][i][j] = score
-            
-            if(score > bestScore[0]):
-                bestScore[0] = score
-                if(Ashort): 
-                    bestScore[1] = (i-1,j-1+count)
-                else:
-                    bestScore[1] = (i-1+count,j-1)
-                
-            if(Ashort):                                 #"forget" the previous column
-                matrices[0][i-1][j-1] = matrices[0][i-1][j] 
-                matrices[1][i-1][j-1] = matrices[1][i-1][j] 
-            else:                                       #"forget" the previous row
-                matrices[0][i-1][j-1] = matrices[0][i][j-1] 
-                matrices[1][i-1][j-1] = matrices[1][i][j-1]
-    if(Ashort):                                 #"forget" the last remaining colunm cell
-        matrices[0][len(matrices[0])-1][len(matrices[0][0])-2] = matrices[0][len(matrices[0])-1][len(matrices[0][0])-1] 
-        matrices[1][len(matrices[0])-1][len(matrices[0][0])-2] = matrices[1][len(matrices[0])-1][len(matrices[0][0])-1]
-    else:                                       #"forget" the last remaining row cell 
-        matrices[0][len(matrices[0])-2][len(matrices[0][0])-1] = matrices[0][len(matrices[0])-1][len(matrices[0][0])-1] 
-        matrices[1][len(matrices[0])-2][len(matrices[0][0])-1] = matrices[1][len(matrices[0])-1][len(matrices[0][0])-1]
-    #print(np.matrix(matrices[1]))
-    count += 1
-
-#print(np.matrix(matrices[0]))
-#print(np.matrix(matrices[1]))
-print("Best Local Score is:  ", bestScore[0])
-"""
+#dynproglin("ACTG", [[2,-1,-1,-1,-2],[-1,2,-1,-2],[-1,-1,2,-1,-2],[-1,-1,-1,2,-2],[-2,-2,-2,-2,0]], "AGTACGCA", "TATGC")
+#dynproglin("ABC", [[1,-1,-2,-1],[-1,2,-4,-1],[-2,-4,3,-2],[-1,-1,-2,0]], "AABBAACA", "CBACCCBA")     
+#dynproglin("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"AAAAACCDDCCDDAAAAACC","CCAAADDAAAACCAAADDCCAAAA")
+#dynproglin("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"AACAAADAAAACAADAADAAA","CDCDDD")
+#dynproglin("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"DDCDDCCCDCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACCCCDDDCDADCDCDCDCD","DDCDDCCCDCBCCCCDDDCDBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBDCDCDCDCD")
 
 def findDiagonals(seqA, seqB, ktup):
     matchPairs = []
@@ -518,48 +606,13 @@ def heuralign(alphabet, scoringMatrix, seqA, seqB):
     print("Resulting indices:  ", bestAlignment[1], bestAlignment[2])
     return bestAlignment[0], bestAlignment[1], bestAlignment[2]
 
-
-"""
-def getMatch(alphabet, scoringMatrix, A, B, i, j):
-    symbolA = ""
-    symbolB = ""
-    for k in range(0, len(alphabet)):
-        if(A[i] == alphabet[k]):
-            symbolA = k
-        if(B[j] == alphabet[k]):
-            symbolB = k
-            
-    return scoringMatrix[symbolA][symbolB]
-    
-    def findIndices(backtr, lenA, lenB, i, j):
-    m = i + 2
-    n = j + 2
-    matchIndexA = []
-    matchIndexB = []
-    while(backtr[m][n] != "FN"):
-        if backtr[m][n] == "L":
-            n -= 1
-        elif backtr[m][n] == "U":
-            m -= 1
-        elif backtr[m][n] == "D":
-            matchIndexA.insert(0,m-2)
-            matchIndexB.insert(0,n-2)
-            m -= 1
-            n -= 1
-        elif(backtr[m][n] == "S"): #end of local alignment
-            break
-        
-    return matchIndexA, matchIndexB
-"""
-
-
-
-
-
-
-#heuralign("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "AAAC", "AGC")
+heuralign("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "AAAC", "AGC")
 #heuralign("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "TAATA", "TACTAA")
-#heuralign("ABC", [[1,-1,-2,-1],[-1,2,-4,-1],[-2,-4,3,-2],[-1,-1,-2,0]], "AABBAACA", "CBACCCBA")
+#heuralign("ACTG", [[2,-1,-1,-1,-2],[-1,2,-1,-2],[-1,-1,2,-1,-2],[-1,-1,-1,2,-2],[-2,-2,-2,-2,0]], "AGTACGCA", "TATGC")
+#heuralign("ABC", [[1,-1,-2,-1],[-1,2,-4,-1],[-2,-4,3,-2],[-1,-1,-2,0]], "AABBAACA", "CBACCCBA")     
+#heuralign("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"AAAAACCDDCCDDAAAAACC","CCAAADDAAAACCAAADDCCAAAA")
+#heuralign("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"AACAAADAAAACAADAADAAA","CDCDDD")
+#heuralign("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"DDCDDCCCDCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACCCCDDDCDADCDCDCDCD","DDCDDCCCDCBCCCCDDDCDBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBDCDCDCDCD")
 
 "TAATA"
 "TACTAA  "
