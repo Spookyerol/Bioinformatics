@@ -609,8 +609,7 @@ def heuralign(alphabet, scoringMatrix, seqA, seqB):
         
     print(bestAlignment[0], bestAlignment[1], bestAlignment[2])
     return bestAlignment[0], bestAlignment[1], bestAlignment[2]
-
-#print("heur")    
+    
 #heuralign("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "AAAC", "AGC")
 #heuralign("ACTG", [[1,-1,-1,-1,-2],[-1,1,-1,-2],[-1,-1,1,-1,-2],[-1,-1,-1,1,-2],[-2,-2,-2,-2,-2]], "TAATA", "TACTAA")
 #heuralign("ACTG", [[2,-1,-1,-1,-2],[-1,2,-1,-2],[-1,-1,2,-1,-2],[-1,-1,-1,2,-2],[-2,-2,-2,-2,0]], "AGTACGCA", "TATGC")
@@ -618,16 +617,6 @@ def heuralign(alphabet, scoringMatrix, seqA, seqB):
 #heuralign("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"AAAAACCDDCCDDAAAAACC","CCAAADDAAAACCAAADDCCAAAA")
 #heuralign("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"AACAAADAAAACAADAADAAA","CDCDDD")
 #heuralign("ABCD", [[ 1,-5,-5,-5,-1],[-5, 1,-5,-5,-1],[-5,-5, 5,-5,-4],[-5,-5,-5, 6,-4],[-1,-1,-4,-4,-9]],"DDCDDCCCDCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACCCCDDDCDADCDCDCDCD","DDCDDCCCDCBCCCCDDDCDBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBDCDCDCDCD")
-
-"""
-#if a mismatch is present along the diagonal include its score
-nonMatchExtend = (pair[0]-1,pair[1]-1)
-while(nonMatchExtend not in pairs and nonMatchExtend[0] >= 0 and nonMatchExtend[1] >= 0):
-    if((nonMatchExtend[0]+1,nonMatchExtend[1]+1) == pairs[0]):
-        break
-    currentScore += getMatch(alphabet, scoringMatrix, seqA, seqB, nonMatchExtend[0], nonMatchExtend[1])
-    nonMatchExtend = (nonMatchExtend[0]-1,nonMatchExtend[1]-1)
-"""
 
             
             
